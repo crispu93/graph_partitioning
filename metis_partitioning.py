@@ -1,5 +1,5 @@
 import networkx as nx
-import metis
+#import metis
 from collections import defaultdict
 from utils import load_graph_file
 import nxmetis
