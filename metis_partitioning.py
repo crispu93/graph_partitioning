@@ -83,7 +83,7 @@ def get_partition(file_name, vol=False):
 def draw_partition(G, parts, output_file_name):
     """Draw a partition using networkx-metis lib"""
 
-    colors = ['red','blue','green']
+    colors = ['red','blue','green', 'yellow']
     for i, p in enumerate(parts):
         for j in p:
             G.nodes[j]['color'] = colors[i]
@@ -112,9 +112,10 @@ def graph_partitioning(file_name, vol=False):
 
 
 if __name__ == "__main__":
+    file_name = "small_graphs/add20"
     #file_name = "small_graphs/crack"
     #file_name = "t60k"
-    file_name = "598a"
+    #file_name = "598a"
+    #file_name = "fe_rotor"
     graph_partitioning(file_name, False)
     graph_partitioning(file_name, True)
-    
