@@ -1,9 +1,11 @@
-from ast import walk
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 from collections import defaultdict
 import networkx as nx
 from karateclub import DeepWalk
 import numpy as np
 import time
+import random
 
 def load_graph_file(file_name):
     """Represents the graph in the file into an adjacency list"""
@@ -32,7 +34,7 @@ def create_features(adj_list):
     start = time.time()
     G = nx.from_dict_of_lists(adj_list)
 
-    model = DeepWalk(walk_length=40, walk_number=30, dimensions=64, window_size=10, workers=8)
+    model = DeepWalk(walk_length=80, walk_number=60, dimensions=64, window_size=15, workers=8)
     model.fit(G)
     features = model.get_embedding()
 
@@ -58,6 +60,28 @@ def read_feature_file(file_name):
     features = np.load("feature_files/" + file_name + ".npy")
     print(f"Features file {file_name} readed. Returned a {features.shape} array")
 
+
+def create_histogram(adj_list, file_name):
+    data = []
+    for value in adj_list.values():
+        data.append(len(value))
+
+    cols = list(colors.cnames.keys())
+    rand_int = random.randint(0,len(cols))
+    plt.hist(data, facecolor=cols[rand_int], histtype='bar', edgecolor='black', linewidth=1.3)
+    plt.xlabel("Degree")
+    plt.ylabel("Number of nodes")
+    plt.title("Distribution of the graph")
+    plt.savefig("histograms/" + file_name + ".png")
+    plt.clf()
+
+
+def create_histograms(prefix, file):
+    file_name = prefix + file
+    adj_list = load_graph_file(file_name)
+    create_histogram(adj_list, file_name)
+
+
 if __name__ == "__main__":
     small_graphs_prefix = "small_graphs/"
     medium_graphs_prefix = "medium_graphs/"
@@ -76,8 +100,13 @@ if __name__ == "__main__":
                 medium_graphs,
                 large_graphs]
 
+    # Create histograms for all graph files            
     for i, file in enumerate(graph_files):
-        create_feature_files(prefixes[i], file)
+        for f in file:
+            create_histograms(prefixes[i], f)
+
+    # for i, file in enumerate(graph_files):
+    #     create_feature_files(prefixes[i], file)
 
     #for path in test_graphs:
     #    read_feature_file(small_graphs_prefix + path)
