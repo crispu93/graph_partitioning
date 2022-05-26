@@ -1,3 +1,5 @@
+# Based on https://github.com/dsgiitr/graph_nets/blob/master/GraphSAGE/GraphSAGE_Code%2BBlog.ipynb
+
 import torch.nn as nn
 import torch
 from torch.nn import init
