@@ -112,10 +112,19 @@ def graph_partitioning(file_name, vol=False):
 
 
 if __name__ == "__main__":
-    file_name = "small_graphs/add20"
+    # file_name = "small_graphs/add20"
     #file_name = "small_graphs/crack"
     #file_name = "t60k"
     #file_name = "598a"
     #file_name = "fe_rotor"
-    graph_partitioning(file_name, False)
-    graph_partitioning(file_name, True)
+
+    small_graphs_prefix = "small_graphs/"
+    medium_graphs_prefix = "medium_graphs/"
+    large_graphs_prefix = "large_graphs/"
+
+    small_graphs = ["bcsstk33", "whitaker3", "crack"]
+    medium_graphs = ["fe_body", "t60k", "wing", "finan512"]
+    large_graphs = ["fe_rotor", "598a", "m14b", "auto"]
+
+    for file_name in small_graphs:
+        graph_partitioning(small_graphs_prefix + file_name, False)

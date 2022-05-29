@@ -20,6 +20,21 @@ def load_graph_file(file_name):
             #print(i+1, ":", adj_list[i+1])
     return adj_list
 
+
+def draw_graph(file_name):
+    adj_list = load_graph_file(file_name)
+    G = nx.from_dict_of_lists(adj_list)
+
+    G = nx.nx_agraph.to_agraph(G)
+    G.node_attr['style']='filled'
+    G.node_attr['color']='red'
+    G.layout()
+    # prog=neato|dot|twopi|circo|fdp|nop|sfdp
+    output_path = "images/" + file_name + ".png"
+    G.draw(output_path)
+    print(f"Graph drawing for {file_name} successfuly created in {output_path}")
+
+
 def to_zero_based(adj_list):
     new_adj_list = defaultdict(list)
 
@@ -99,11 +114,14 @@ if __name__ == "__main__":
     graph_files = [small_graphs,
                 medium_graphs,
                 large_graphs]
+    # Draw graphs
+    for path in small_graphs:
+        draw_graph(small_graphs_prefix + path)
 
     # Create histograms for all graph files            
-    for i, file in enumerate(graph_files):
-        for f in file:
-            create_histograms(prefixes[i], f)
+    # for i, file in enumerate(graph_files):
+    #     for f in file:
+    #         create_histograms(prefixes[i], f)
 
     # for i, file in enumerate(graph_files):
     #     create_feature_files(prefixes[i], file)
