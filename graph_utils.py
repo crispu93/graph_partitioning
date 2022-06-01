@@ -20,20 +20,40 @@ def load_graph_file(file_name):
             #print(i+1, ":", adj_list[i+1])
     return adj_list
 
+def load_edge_list_file(file_name):
+    """Represents the graph in the file into an adjacency list"""
 
-def draw_graph(file_name):
-    adj_list = load_graph_file(file_name)
-    G = nx.from_dict_of_lists(adj_list)
+    path = "graph_files/" + file_name + ".edges"
+    adj_list = defaultdict(list)
+    with open(path) as fp:
+        fp.readline()
+        for i, line in enumerate(fp):
+            nodes = [int(x) for x in line.strip().split()[0:2]]
 
-    G = nx.nx_agraph.to_agraph(G)
-    G.node_attr['style']='filled'
-    G.node_attr['color']='red'
-    G.layout()
-    # prog=neato|dot|twopi|circo|fdp|nop|sfdp
-    output_path = "images/" + file_name + ".png"
-    G.draw(output_path)
-    print(f"Graph drawing for {file_name} successfuly created in {output_path}")
+            adj_list[nodes[0]].append(nodes[1])
+            adj_list[nodes[1]].append(nodes[0])
+            #adj_list[i+1].extend(adj_nodes)
+    return adj_list
 
+def load_graph_file_to_list(file_name):
+    """Represents the graph in the file into an adjacency list"""
+
+    path = "graph_files/" + file_name + ".graph"
+    adj_list = []
+
+    fp = open(path, 'r')
+    fp.readline()
+    lines = list(enumerate(fp))
+    nodes = len(lines)
+    adj_list = [ [] for _ in range(nodes) ]
+    print(f"Size of adj_list: {len(adj_list)}")
+
+    for i, line in lines:
+        adj_nodes = [int(x)-1 for x in line.strip().split()]
+        adj_list[i].extend(adj_nodes)
+        # print(f"Node {i} : {adj_list[i]}")
+    fp.close()
+    return adj_list
 
 def to_zero_based(adj_list):
     new_adj_list = defaultdict(list)
@@ -43,6 +63,20 @@ def to_zero_based(adj_list):
         new_adj_list[key-1] = adj_nodes
 
     return new_adj_list
+
+def draw_graph(file_name):
+    adj_list = load_graph_file(file_name)
+    G = nx.from_dict_of_lists(adj_list)
+
+    G = nx.nx_agraph.to_agraph(G)
+    G.node_attr['style']='filled'
+    G.node_attr['color']='red'
+    # G.layout()
+    # prog=neato|dot|twopi|circo|fdp|nop|sfdp
+    # Choose neato for better graph visualization and sfdp for partitioning visualization
+    output_path = "images/" + file_name + ".png"
+    G.draw(output_path, prog='neato')
+    print(f"Graph drawing for {file_name} successfuly created in {output_path}")
 
 
 def create_features(adj_list):
@@ -114,9 +148,14 @@ if __name__ == "__main__":
     graph_files = [small_graphs,
                 medium_graphs,
                 large_graphs]
+
+    file_name = small_graphs_prefix + small_graphs[7]
+    load_graph_file_to_list(file_name)
+    draw_graph(file_name)
+
     # Draw graphs
-    for path in small_graphs:
-        draw_graph(small_graphs_prefix + path)
+    # for path in small_graphs:
+    #    draw_graph(small_graphs_prefix + path)
 
     # Create histograms for all graph files            
     # for i, file in enumerate(graph_files):

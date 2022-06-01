@@ -33,3 +33,9 @@ def custom_loss_sparse(Y, A):
     for i in range(idx.shape[1]):
         loss += torch.dot(YbyGamma[idx[0,i],:], Y_t[:,idx[1,i]])
     return loss
+
+
+def test_partition(Y):
+    _, idx = torch.max(Y, 1)
+    print(_, idx)
+    return idx
