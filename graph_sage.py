@@ -110,7 +110,7 @@ class UnsupervisedLoss(object):
 		self.get_negtive_nodes(nodes, num_neg)
 		# print(self.negtive_pairs)
 		self.unique_nodes_batch = list(set([i for x in self.positive_pairs for i in x]) | set([i for x in self.negtive_pairs for i in x]))
-		assert set(self.target_nodes) < set(self.unique_nodes_batch)
+		assert set(self.target_nodes) <= set(self.unique_nodes_batch)
 		return self.unique_nodes_batch
 
 	def get_positive_nodes(self, nodes):
@@ -123,7 +123,7 @@ class UnsupervisedLoss(object):
 			for i in range(self.N_WALK_LEN):
 				current = set()
 				for outer in frontier:
-					current |= self.adj_lists[int(outer)]
+					current |= set(self.adj_lists[int(outer)])
 				frontier = current - neighbors
 				neighbors |= current
 			far_nodes = set(self.train_nodes) - neighbors
@@ -381,11 +381,10 @@ class CutLoss(torch.autograd.Function):
 		return gradient, None
 
 
-class PartitioningModule(nn.module):
+class PartitioningModule(nn.Module):
 
-	def __init__(self, ll, dropout):
+	def __init__(self, ll):
 		super(PartitioningModule, self).__init__()
-		self.dropout = dropout
 		self.linlayers = nn.ModuleList([nn.Linear(ll[i], ll[i+1]) for i in range(len(ll)-1)])
 		self.init_params()
 
