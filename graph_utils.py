@@ -26,7 +26,6 @@ def load_edge_list_file(file_name):
     path = "graph_files/" + file_name + ".edges"
     adj_list = defaultdict(list)
     with open(path) as fp:
-        fp.readline()
         for i, line in enumerate(fp):
             nodes = [int(x) for x in line.strip().split()[0:2]]
 

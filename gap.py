@@ -29,7 +29,7 @@ if torch.cuda.is_available():
 else:
     print("WARNING: You don't have a CUDA device")
     device = torch.device("cpu")
-device = torch.device("cpu")
+# device = torch.device("cpu")
 
 
 def apply_model(graphSage, graphPartitioner, unsupervised_loss, unsup_loss_type, min_loss):#, learn_method, batch_size):
@@ -55,7 +55,7 @@ def apply_model(graphSage, graphPartitioner, unsupervised_loss, unsup_loss_type,
             if param.requires_grad:
                 params.append(param)
     
-    optimizer = torch.optim.SGD(params, lr=0.7)
+    optimizer = torch.optim.SGD(params, lr=0.07)
     optimizer.zero_grad()
     for model in models:
         model.zero_grad()
@@ -67,6 +67,7 @@ def apply_model(graphSage, graphPartitioner, unsupervised_loss, unsup_loss_type,
 
     # extend nodes batch for unspervised learning
     # no conflicts with supervised learning
+    print("Num neg", num_neg)
     nodes_batch = np.asarray(list(unsupervised_loss.extend_nodes(nodes, num_neg=num_neg)))
     visited_nodes |= set(nodes_batch)
 
@@ -90,7 +91,7 @@ def apply_model(graphSage, graphPartitioner, unsupervised_loss, unsup_loss_type,
         torch.save(graphPartitioner.state_dict(), "./part_trial_weights.pt")
 
     print('Loss: {:.4f}, Dealed Nodes [{}/{}] '.format(loss.item(), len(visited_nodes), len(nodes)))
-    loss.backward()
+    # loss.backward()
     for model in models:
         nn.utils.clip_grad_norm_(model.parameters(), 5)
     optimizer.step()
@@ -117,7 +118,7 @@ def Test(graphSage, graphPartitioner):
     '''
     graphSage.load_state_dict(torch.load("./emb_trial_weights.pt"))
     graphPartitioner.load_state_dict(torch.load("./part_trial_weights.pt"))
-    node_batch = list(range(len(adj_list)))
+    node_batch = list(range(len(graphSage.adj_lists)))
     embs_batch = graphSage(node_batch)
     Y = graphPartitioner(embs_batch)
     node_idx = test_partition(Y)
@@ -131,13 +132,19 @@ def Test(graphSage, graphPartitioner):
 
 def main():
     # Datasets creation
-    file_name = "aves-thornbill-farine"
+    # file_name = "aves-thornbill-farine"
+    # file_name = "test_small_graph"
+    file_name = "insecta-ant-colony1-day01"
     num_partitions = 2
     graph_part = GraphPartitioning(SMALL_GRAPHS_PREFIX, file_name, num_partitions, vol=True, chaco=False)
+    #graph_part = GraphPartitioning(SMALL_GRAPHS_PREFIX, file_name, num_partitions, vol=True, chaco=True)
+    adj_list = list(map(list, iter(graph_part.G.adj.values())))
     graph_part.create_features()
+    # graph_part.to_metis_partition()
+    # graph_part.draw_partition()
 
     # Parameters for GraphSAGE
-    num_layers = 5
+    num_layers = 3
     hidden_emb_size = 128
     features = torch.Tensor(graph_part.read_feature_file()).to(device)
     adj_list = list(map(list, iter(graph_part.G.adj.values())))
@@ -155,8 +162,8 @@ def main():
     # Unsupervised loss for graphSage model
     node_batch = list(range(len(adj_list)))
     unsupervised_loss = UnsupervisedLoss(adj_list, node_batch, device)
-    unsup_loss_type = 'margin' # can be 'normal' for more samples
-    max_epochs = 10
+    unsup_loss_type = 'normal' # can be 'normal' for more samples
+    max_epochs = 1
     min_loss = 100
 
     # Train

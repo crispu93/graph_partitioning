@@ -12,10 +12,15 @@ class UnsupervisedLoss(object):
 	"""docstring for UnsupervisedLoss"""
 	def __init__(self, adj_lists, train_nodes, device):
 		super(UnsupervisedLoss, self).__init__()
+		# self.Q = 10
+		# self.N_WALKS = 6
+		# self.WALK_LEN = 1
+		# self.N_WALK_LEN = 5
+		# self.MARGIN = 3
 		self.Q = 10
 		self.N_WALKS = 6
 		self.WALK_LEN = 1
-		self.N_WALK_LEN = 5
+		self.N_WALK_LEN = 1
 		self.MARGIN = 3
 		self.adj_lists = adj_lists
 		self.train_nodes = train_nodes
@@ -70,12 +75,15 @@ class UnsupervisedLoss(object):
 
 		nodes_score = []
 		assert len(self.node_positive_pairs) == len(self.node_negtive_pairs)
+		#print("Positive node", self.node_positive_pairs)
+		#print("Negative node", self.node_negtive_pairs)
 		for node in self.node_positive_pairs:
 			pps = self.node_positive_pairs[node]
 			nps = self.node_negtive_pairs[node]
+
 			if len(pps) == 0 or len(nps) == 0:
 				continue
-
+				
 			indexs = [list(x) for x in zip(*pps)]
 			node_indexs = [node2index[x] for x in indexs[0]]
 			neighb_indexs = [node2index[x] for x in indexs[1]]
@@ -110,6 +118,9 @@ class UnsupervisedLoss(object):
 		self.get_negtive_nodes(nodes, num_neg)
 		# print(self.negtive_pairs)
 		self.unique_nodes_batch = list(set([i for x in self.positive_pairs for i in x]) | set([i for x in self.negtive_pairs for i in x]))
+		# print("Unique", self.unique_nodes_batch)
+		# print("positive", self.positive_pairs)
+		# print("negative", self.negtive_pairs)
 		assert set(self.target_nodes) <= set(self.unique_nodes_batch)
 		return self.unique_nodes_batch
 
@@ -123,6 +134,7 @@ class UnsupervisedLoss(object):
 			for i in range(self.N_WALK_LEN):
 				current = set()
 				for outer in frontier:
+					#print("in get_negative_nodes", self.adj_lists[int(outer)])
 					current |= set(self.adj_lists[int(outer)])
 				frontier = current - neighbors
 				neighbors |= current
@@ -318,15 +330,15 @@ class CutLoss(torch.autograd.Function):
 	def forward(ctx, Y, adj_list):
 		idx_list1 = [x for x, a in enumerate(adj_list) for _ in range(len(a))]
 		idx_list2 = [x for a in adj_list for x in a]
-		idx = torch.tensor([idx_list1, idx_list2])#.to('cuda')
-		data = torch.ones(idx.shape[1])#.to('cuda')
-		D = torch.tensor([float(len(a)) for a in adj_list])#.to('cuda')
+		idx = torch.tensor([idx_list1, idx_list2]).to('cuda')
+		data = torch.ones(idx.shape[1]).to('cuda')
+		D = torch.tensor([float(len(a)) for a in adj_list]).to('cuda')
 		ctx.save_for_backward(Y, D, idx, data)
 		Gamma = torch.mm(Y.t(), D.unsqueeze(1))
 		# print("D", D)
 		# print("Gama", Gamma)
-		# print("Y", Y)
-		# print("Y", Y.t())
+		print("Y", Y)
+		# print("Yt", Y.t())
 		YbyGamma = torch.div(Y, Gamma.t())
 		# print(Gamma)
 		Y_t = (1 - Y).t()
@@ -372,7 +384,7 @@ class CutLoss(torch.autograd.Function):
 					for val, mem in zip(l2_val, l2):
 						extra_gradient += (-D[i] * torch.sum(
 							Y[mem[0], j] * (1 - Y[mem[1], j]) / torch.pow(Gamma[j], 2))) * val
-				#print(f"i: {i} and j: {j} from {gradient.shape[0]} and {gradient.shape[0]}")
+				print(f"i: {i} and j: {j} from {gradient.shape[0]} and {gradient.shape[0]}")
 				gradient[i, j] += extra_gradient
 				#t2 = time.time()
 				#print(f"other took: {t2-t1}")

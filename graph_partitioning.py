@@ -1,3 +1,4 @@
+import copy
 import networkx as nx
 from graph_utils import load_graph_file, to_zero_based, load_edge_list_file
 import nxmetis
@@ -27,21 +28,22 @@ class GraphPartitioning:
         adj_list = load_edge_list_file(self.file_name)
         adj_list = to_zero_based(adj_list)
         self.G = nx.from_dict_of_lists(adj_list)
+
     
     def to_metis_partition(self):
         """Partitions a graph using networkx-metis lib"""
-
+        
         if self.vol == False:
             options = nxmetis.MetisOptions(contig=False, ncuts=3, objtype=0)
             (cutcost, parts) = nxmetis.partition(self.G, nparts=self.num_parts, options=options)
             print(
-                f"The Graph {file_name} has been partitioned with cut={cutcost}"
+                f"The Graph {self.file_name} has been partitioned with cut={cutcost}"
                 )
         else:
             options = nxmetis.MetisOptions(contig=False, ncuts=3, objtype=1)
             (cutcost, parts) = nxmetis.partition(self.G, nparts=self.num_parts, options=options)
             print(
-                f"The Graph {file_name} has been partitioned according to vol with cut={cutcost}"
+                f"The Graph {self.file_name} has been partitioned according to vol with cut={cutcost}"
                 )
 
         for i,p in enumerate(parts):
@@ -52,15 +54,15 @@ class GraphPartitioning:
 
     def draw_partition(self):
         """Draw a partition using networkx-metis lib"""
-
         colors = ['red', 'blue', 'green', 'yellow']
         for i, p in enumerate(self.parts):
+            print(p)
             for j in p:
                 self.G.nodes[j]['color'] = colors[i]
 
-        print("Drawing the partitioned graph")
         A = nx.nx_agraph.to_agraph(self.G)
         A.node_attr['style']='filled'
+
         A.draw("images/" + self.file_name + ".png", prog="sfdp")
         print(
             f"Image succesfully saved to {'images/' + self.file_name + '.png'}"
@@ -70,7 +72,8 @@ class GraphPartitioning:
         start = time.time()
 
         model = DeepWalk(walk_length=80, walk_number=60, dimensions=64, window_size=15, workers=8)
-        model.fit(self.G)
+        graph = copy.deepcopy(self.G)
+        model.fit(graph)
         features = model.get_embedding()
 
         end = time.time()

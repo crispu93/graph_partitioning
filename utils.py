@@ -37,5 +37,4 @@ def custom_loss_sparse(Y, A):
 
 def test_partition(Y):
     _, idx = torch.max(Y, 1)
-    print(_, idx)
     return idx
