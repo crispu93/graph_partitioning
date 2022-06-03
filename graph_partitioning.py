@@ -5,6 +5,7 @@ import nxmetis
 from karateclub import DeepWalk
 import time
 import numpy as np
+from networkx.algorithms import community
 
 class GraphPartitioning:
     def __init__(self, prefix_name, name, num_parts, vol=False, chaco=True):
@@ -56,7 +57,6 @@ class GraphPartitioning:
         """Draw a partition using networkx-metis lib"""
         colors = ['red', 'blue', 'green', 'yellow']
         for i, p in enumerate(self.parts):
-            print(p)
             for j in p:
                 self.G.nodes[j]['color'] = colors[i]
 
@@ -67,6 +67,18 @@ class GraphPartitioning:
         print(
             f"Image succesfully saved to {'images/' + self.file_name + '.png'}"
             )
+    def draw_graph(self):
+        G = nx.nx_agraph.to_agraph(self.G)
+        G.node_attr['style']='filled'
+        G.node_attr['color']='red'
+        # G.layout()
+        # prog=neato|dot|twopi|circo|fdp|nop|sfdp
+        # Choose neato for better graph visualization and sfdp for partitioning visualization
+        output_path = "images/" + self.file_name + "-neato" + ".png"
+        G.draw(output_path, prog='neato')
+        output_path = "images/" + self.file_name + "sfdp" + ".png"
+        G.draw(output_path, prog='sfdp')
+        print(f"Graph drawing for {self.file_name} successfuly created in {output_path}")
 
     def create_features(self):
         start = time.time()
@@ -88,6 +100,23 @@ class GraphPartitioning:
         self.features = np.load("feature_files/" + self.file_name + ".npy")
         print(f"Features file {self.file_name} readed. Returned a {self.features.shape} array")
         return self.features
+
+    def part_graph(self):
+        # part1, part2 = community.kernighan_lin.kernighan_lin_bisection(self.G)
+        part1, part2 = community.girvan_newman(self.G)
+        c = self.cut_size(part1, part2)
+        print("The final cut value is:", c)
+
+    def cut_size(self, n1, n2):
+        adj_list = list(map(list, iter(self.G.adj.values())))
+        cut = 0
+        for i in n1:
+            for j in n2:
+                if j in adj_list[i]:
+                # if A[i][j] == 1:
+                    cut = cut + 1
+        return cut
+
 
 if __name__ == "__main__":
     small_graphs_prefix = "small_graphs/"

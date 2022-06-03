@@ -151,7 +151,7 @@ class CutLoss(torch.autograd.Function):
 
 def test_partition(Y):
     _, idx = torch.max(Y, 1)
-    return 
+    return idx
 
 def symnormalise(M):
     """
@@ -179,3 +179,103 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     values = torch.from_numpy(sparse_mx.data)
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse.FloatTensor(indices, values, shape)
+
+def custom_loss_equalpart(Y, A, beta):
+    '''
+    loss function described in https://arxiv.org/abs/1903.00614
+    arguments:
+        Y_ij : Probability that a node i belongs to partition j
+        A : dense adjecency matrix
+    Returns:
+        Loss : Y/Gamma * (1 - Y)^T dot A + beta* (I^T Y - n/g)^2
+    '''
+    # beta = 0.0001
+    D = torch.sum(A, dim=1)
+    n = Y.shape[0]
+    g = Y.shape[1]
+    Gamma = torch.mm(Y.t(), D.unsqueeze(1))
+    # print(F.softmax(Y/0.1, 1)[0:10,:])
+    # print(Y[0:10,:])
+    # print(torch.mm(torch.ones(1,n).to('cuda')/n, F.softmax(Y/0.1, 1)))
+    # balance_loss = torch.sum(torch.pow(torch.mm(torch.ones(1,n).to('cuda')/n, F.softmax((Y + torch.randn(Y.shape).to('cuda') * 0.2)/0.1, 1)) - 1/g , 2))
+    # print("Ones", torch.ones(1, n))
+    # print("Y", Y)
+    # print("Sum", torch.sum(Y, dim=1))
+    # print("Balance:", torch.mm(torch.ones(1, n).to('cuda'), Y))
+    # input()
+    # balance_loss = torch.sum(torch.pow(torch.mm(torch.ones(1, n).to('cuda'), Y) - (n / g), 2))
+    balance_loss = torch.sum(torch.pow(torch.sum(Y, dim=0) - (n / g), 2))
+    partition_loss = torch.sum(torch.mm(torch.div(Y.float(), Gamma.t()), (1 - Y).t().float()) * A.float())
+    print('Partition Loss:{0:.3f} \t Balance Loss:{1:.3f}'.format(partition_loss, balance_loss))
+    loss = partition_loss + beta * balance_loss
+    return loss
+
+
+def get_stats(node_idx, n_part):
+    bucket = torch.zeros(n_part)
+    for i in range(n_part):
+        # print(i)
+        bucket[i] = torch.sum((node_idx == i).int())
+
+    imbalance = torch.mean(torch.abs(bucket-len(node_idx)/2) * 100/len(node_idx))
+    # imbalance = torch.mean(torch.pow(bucket/len(node_idx) - 1/n_part,2)) * 100
+    if n_part == 2:
+        print('Total Elements: {} \t Partition 1: {} \t Partition 2: {}'.format(len(node_idx), bucket[0], bucket[1]))
+    if n_part == 3:
+        print('Total Elements: {} \t Partition 1: {} \t Partition 2: {} \t Partition 3: {}'.format(len(node_idx), bucket[0], bucket[1], bucket[2]))
+
+    print('Imbalance = {0:.3f}%'.format(imbalance))
+    return imbalance
+
+
+def get_edgecut(As, node_idx):
+    idx = As.coalesce().indices()
+    values = As.coalesce().values()
+    different_part = (node_idx[idx[0,:]] ^ node_idx[idx[1,:]]).type(torch.cuda.FloatTensor)
+    edgecut = torch.sum(different_part * values) / 2
+    totalwt = torch.sum(values)/2
+    print('Edgecut = {0:.3f} \t total edge weight = {1:.3f} \t percent of edge weight cut = {2:.3f}%'.format(edgecut, totalwt, edgecut*100/totalwt))
+    return edgecut*100/totalwt
+
+
+class HypEdgeLst(object):
+    '''
+    This handles parsing and calculating hyperedges cut
+    '''
+    def __init__(self, filename):
+        file = open(filename, 'r')
+        self.file_name = filename
+        self.hyedge = []
+        num_hyedges = 0
+        nodes = set()
+        for idx, line in enumerate(file):
+            element = line.strip().split()[0:2]
+            # if idx == 0:
+            #     self.num_hyedges = int(element[0])
+            #     self.num_nodes = int(element[1])
+            # else:
+            hyedge = np.asarray(list(map(int, element))) - 1
+            self.hyedge.append(hyedge)
+            num_hyedges += 1
+            nodes.add(element[0])
+            nodes.add(element[1])
+        self.num_hyedges = num_hyedges
+        self.num_nodes = len(nodes)
+
+    def get_cut(self, node_idx):
+        int_hyedge = 0
+        for hyedge in self.hyedge:
+            node_class = node_idx[hyedge].data.cpu().numpy()
+            # print("Node_idx", node_idx)
+            # print("node[hyedge]", node_idx[hyedge])
+            # print("hyedge", hyedge)
+            # print("nodeclass", node_class)
+            # input()
+            # if not np.all(node_class == node_class[0]):
+            if node_class[0] != node_class[1]:
+                # print('cut')
+                int_hyedge += 1
+
+        print('Number of Hyper Edges intersected = {}/{} = {}'.format(int_hyedge, self.num_hyedges, int_hyedge/self.num_hyedges))
+        return int_hyedge
+
